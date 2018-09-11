@@ -1,5 +1,13 @@
 # mqtt-gateway
 
+### sudo raspi-config
+
+- 1. enable ssh
+
+- 2. enable console and autologin
+
+- 3. enable wait for network at boot (optional)
+
 ## Connect to Wifi:
 
 https://www.raspberrypi.org/documentation/configuration/wireless/wireless-cli.md
@@ -22,11 +30,11 @@ https://www.instructables.com/id/Installing-MQTT-BrokerMosquitto-on-Raspberry-Pi
 
 ### add:
 
-listener 1883
+- listener 1883
 
-listener 9001
+- listener 9001
 
-protocol websockets
+- protocol websockets
 
 ### sudo service mosquitto restart
 
