@@ -24,9 +24,9 @@ https://www.raspberrypi-spy.co.uk/2015/02/how-to-autorun-a-python-script-on-rasp
 
 https://www.instructables.com/id/Installing-MQTT-BrokerMosquitto-on-Raspberry-Pi/
 
-### cd /etc/mosquitto/conf.d/
+- cd /etc/mosquitto/conf.d/
 
-### vim listener.conf
+- vim listener.conf
 
 ### add:
 
