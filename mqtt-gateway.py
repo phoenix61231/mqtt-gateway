@@ -8,6 +8,7 @@ import fcntl
 import struct
 from apscheduler.schedulers.background import BackgroundScheduler
 from pyfcm import FCMNotification
+import datetime
 
 GPIO.setmode(GPIO.BOARD)
 GPIO.setup(7, GPIO.OUT)
@@ -16,39 +17,58 @@ GPIO.output(7, False)
 scheduler = BackgroundScheduler()
 scheduler.start()
 
+scheduler_t = BackgroundScheduler()
+
 push_service = FCMNotification(api_key="AIzaSyAE5F6O2xAm9XPIq90vkJbTGAkLJrhsFbI")
 
+temperature_avg = 25.0
+soil_avg = 50.0
 
 def on_message_msg(client, userdata, message):
+    global temperature_avg, soil_avg
     print("Topic : " + message.topic + " || Message : " + str(message.payload.decode("utf-8")) + "\n")
 
     server.publish(message.topic, str(message.payload.decode("utf-8")), retain=True)
+    msg_list = str(message.payload.decode("utf-8")).split(" / ")
+    temperature_list  = msg_list[3].split(":")
+    soil_list = msg_list[7].split(":")
+
+    temperature_avg = (float(temperature_list[1])+temperature_avg)/2
+    soil_avg = (float(soil_list[1])+soil_avg)/2
+    
 
 
 def on_message_ctrl(client, userdata, message):
     global scheduler, push_service
 
+    current_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     msg = str(message.payload.decode("utf-8"))
     print("Topic : " + message.topic + " || Message : " + msg)
     if msg == "OFF":
         GPIO.output(7, False)
-        push_service.notify_topic_subscribers(topic_name="uscclab", message_title="Rpi Pile", message_body="Turn Off")
+        push_service.notify_topic_subscribers(topic_name="uscclab", message_title="樹莓農樁", message_body="水閥 OFF    "+current_time)
     elif msg == "ON":
         GPIO.output(7, True)
-        push_service.notify_topic_subscribers(topic_name="uscclab", message_title="Rpi Pile", message_body="Turn On")
+        push_service.notify_topic_subscribers(topic_name="uscclab", message_title="樹莓農樁", message_body="水閥 ON    "+current_time)
     elif message.topic=="uscclab/gateway_001/schedule":
         schedule_list = msg.split(" ")
+        
+        server.publish("uscclab/gateway_001/control", "OFF", retain=True)
         scheduler.shutdown(wait=False)
         scheduler = BackgroundScheduler()
-        for content in schedule_list:
-            if content[0] == "1":
-                content_hour = content[2:4]
-                content_minute = content[4:6]
-                scheduler.add_job(scheduler_job, "cron", hour=content_hour, minute=content_minute)
-            elif content[0] == "2":
-                content_temperature = content[3:5]
-            elif content[0] == "3":
-                content_humidity = content[3:5]
+        
+        schedule_list.remove('')
+        
+        if len(schedule_list) != 0:
+            for content in schedule_list:
+                if content[0] == "1":
+                    content_hour = content[2:4]
+                    content_minute = content[5:7]
+                    scheduler.add_job(scheduler_job, "cron", hour=content_hour, minute=content_minute)
+                elif content[0] == "2" or content[0] == "3":
+                    schedule_temperature = float(content[3:5])
+                    schedule_soil = float(content[3:5])
+                    scheduler.add_job(condition_job, "interval", seconds=300, args=[schedule_temperature, schedule_soil])
 
         scheduler.start()
 
@@ -60,6 +80,19 @@ def scheduler_job():
     server.publish("uscclab/gateway_001/control", "OFF", retain=True)
 
 
+def condition_job(temperature, soil):
+    global temperature_avg, soil_avg, scheduler_t
+    
+    if temperature_avg>temperature and not scheduler_t.running:
+        scheduler_t.add_job(scheduler_job, "interval", seconds=7200)
+        scheduler_t.start()
+    elif temperature_avg<temperature and scheduler_t.running:
+        server.publish("uscclab/gateway_001/control", "OFF", retain=True)
+        scheduler_t.shutdown(wait=False)
+        scheduler_t = BackgroundScheduler()
+    
+    if soil_avg<soil:
+        scheduler_job()
 
 
 def get_ipaddress(ifname):
