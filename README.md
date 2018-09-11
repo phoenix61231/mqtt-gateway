@@ -16,17 +16,19 @@ https://www.raspberrypi-spy.co.uk/2015/02/how-to-autorun-a-python-script-on-rasp
 
 https://www.instructables.com/id/Installing-MQTT-BrokerMosquitto-on-Raspberry-Pi/
 
-cd /etc/mosquitto/conf.d/
+### cd /etc/mosquitto/conf.d/
 
-vim listener.conf
+### vim listener.conf
 
-add:
+### add:
 
 listener 1883
+
 listener 9001
+
 protocol websockets
 
-sudo service mosquitto restart
+### sudo service mosquitto restart
 
 ## Network Service Discovery :
 
@@ -34,4 +36,4 @@ https://pastebin.com/0RhJyZud
 
 http://pjack1981.blogspot.com/2012/07/avahi.html
 
-create a service named '_mosquitto._tcp'
+### create a service named '_mosquitto._tcp'
